@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Performance</title>
+</head>
+<body>
+  <button class="load_image">load image</button>
+  <img />
+
+  <script type="text/javascript" src="send.js"></script>
+
+  <script type="text/javascript">
+    let counter = new Counter();
+
+    counter.init('046844D8-57A4-46EF-90A8-18895099748D', String(Math.random()).substr(2, 12), 'send test');
+    counter.setAdditionalParams({
+      env: 'production',
+      platform: 'touch'
+    });
+
+    counter.send('connect', performance.timing.connectEnd - performance.timing.connectStart);
+    counter.send('ttfb', performance.timing.responseEnd - performance.timing.requestStart);
+    counter.send('domInteractive', performance.timing.domInteractive);
+
+    const imageLinks = [
+      'https://ya.clan.su/_ph/13/750885308.jpg?1632519513',
+      'https://avatars.mds.yandex.net/i?id=b29e948de3a882c45ebb1876c8a584ff-5218279-images-thumbs&n=13',
+      'https://avatars.mds.yandex.net/i?id=420c32854f3c24f0f3342f2c8f74847f-5234598-images-thumbs&n=13',
+      'https://avatars.mds.yandex.net/i?id=869416b59fa0a3fea982111fbf1b2fa6-5231675-images-thumbs&n=13'
+    ];
+
+    let imageCounter = 0;
+
+    document.querySelector('.load_image').onclick = function() {
+      let timeStart = Date.now();
+
+      setTimeout(function() {
+        counter.send('image', Date.now() - timeStart);
+
+        let image = document.images[0];
+        let downloadingImage = new Image();
+        downloadingImage.onload = function(){
+            image.src = this.src;   
+        };
+        downloadingImage.src = imageLinks[imageCounter];
+        imageCounter = (imageCounter + 1) % imageLinks.length;
+      }, Math.random() * 1000 + 2000);
+    };
+
+    var totalBlockingTime = 0;
+    var observer = new PerformanceObserver(function (list) {
+      let perfEntries = list.getEntries();
+      for (const perfEntry of perfEntries) {
+        totalBlockingTime += perfEntry.duration - 50;
+      }
+      counter.send('tbt', totalBlockingTime);
+    });
+    observer.observe({ type: "longtask", buffered: true });
+  </script>
+</body>
+</html>

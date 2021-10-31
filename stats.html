@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Metrics</title>
+</head>
+<body>
+  <script type="text/javascript">
+    function quantile(arr, q) {
+      const sorted = arr.sort((a, b) => a - b);
+      const pos = (sorted.length - 1) * q;
+      const base = Math.floor(pos);
+      const rest = pos - base;
+
+      if (sorted[base + 1] !== undefined) {
+          return Math.floor(sorted[base] + rest * (sorted[base + 1] - sorted[base]));
+      } else {
+          return Math.floor(sorted[base]);
+      }
+    };
+
+    function prepareData(result) {
+      return result.data.map(item => {
+        item.date = item.timestamp.split('T')[0];
+
+        return item;
+      });
+    }
+
+    function addMetricByDate(data, page, name, date) {
+      let sampleData = data
+              .filter(item => item.page == page && item.name == name && item.date == date)
+              .map(item => item.value);
+
+      let result = {};
+
+      result.hits = sampleData.length;
+      result.p25 = quantile(sampleData, 0.25);
+      result.p50 = quantile(sampleData, 0.5);
+      result.p75 = quantile(sampleData, 0.75);
+      result.p95 = quantile(sampleData, 0.95);
+
+      return result;
+    }
+
+    function calcMetricsByDate(data, page, date) {
+      console.log(`All metrics for ${date}:`);
+
+      let table = {};
+      table.connect = addMetricByDate(data, page, 'connect', date);
+      table.ttfb = addMetricByDate(data, page, 'ttfb', date);
+      table.domInteractive = addMetricByDate(data, page, 'domInteractive', date);
+      table.image = addMetricByDate(data, page, 'image', date);
+      table.tbt = addMetricByDate(data, page, 'tbt', date);
+
+      console.table(table);
+    };
+
+    function addMetricByMonth(data, page, name, date) {
+      let sampleData = data
+              .filter(item => item.page == page && item.name == name && item.date.startsWith(date))
+              .map(item => item.value);
+
+      let result = {};
+
+      result.hits = sampleData.length;
+      result.p25 = quantile(sampleData, 0.25);
+      result.p50 = quantile(sampleData, 0.5);
+      result.p75 = quantile(sampleData, 0.75);
+      result.p95 = quantile(sampleData, 0.95);
+
+      return result;
+    }
+
+    function calcMetricsByMonth(data, page, date) {
+      console.log(`All metrics for ${date}:`);
+
+      let table = {};
+      table.connect = addMetricByMonth(data, page, 'connect', date);
+      table.ttfb = addMetricByMonth(data, page, 'ttfb', date);
+      table.domInteractive = addMetricByMonth(data, page, 'domInteractive', date);
+      table.image = addMetricByMonth(data, page, 'image', date);
+      table.tbt = addMetricByMonth(data, page, 'tbt', date);
+
+      console.table(table);
+    };
+
+    fetch('https://shri.yandex/hw/stat/data?counterId=046844D8-57A4-46EF-90A8-18895099748D')
+      .then(res => res.json())
+      .then(result => {
+        console.log(result);
+        let data = prepareData(result);
+
+        calcMetricsByDate(data, 'send test', '2021-10-31');
+        calcMetricsByMonth(data, 'send test', '2021-10');
+      });
+  </script>
+</body>
+</html>
